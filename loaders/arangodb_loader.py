@@ -1,27 +1,3 @@
-"""
-Load the sampled Pokec dataset into self-hosted ArangoDB Community.
-
-Deployment: Render free instance, ArangoDB Docker with RAM cap:
-  docker run -p 8529:8529 \
-    -e ARANGO_ROOT_PASSWORD=$ARANGODB_PASSWORD \
-    -e ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY=268435456 \
-    arangodb/arangodb:latest
-
-The memory override flag tells ArangoDB it has 256 MB (268435456 bytes),
-so it sizes its internal caches proportionally — without this it reads the
-host's full RAM and allocates far more than our tier budget.
-
-Env vars:
-  ARANGODB_HOST      localhost
-  ARANGODB_PORT      8529
-  ARANGODB_USER      root
-  ARANGODB_PASSWORD  <password>
-
-Query language note:
-  ArangoDB uses AQL, not Cypher. Equivalent queries are documented
-  alongside each Cypher query in workloads/traversal.py.
-"""
-
 import csv
 import os
 import time

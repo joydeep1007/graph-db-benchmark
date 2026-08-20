@@ -1,15 +1,3 @@
-"""
-Load the sampled Pokec dataset into CognoDB Cloud.
-
-CognoDB is Neo4j-protocol-compatible, so this uses the official
-neo4j Python driver pointing at the CognoDB Bolt endpoint.
-
-Connection details are read from environment variables:
-  COGNODB_URI      bolt+s://<instance-id>.databases.cognodb.cloud
-  COGNODB_USER     cognodb   (default)
-  COGNODB_PASSWORD <generated password shown once at signup>
-"""
-
 import csv
 import os
 import time

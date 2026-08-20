@@ -6,7 +6,7 @@ Queries:
   Filtered lookup — fetch all nodes where gender=1 (indexed scan)
   Aggregation     — count nodes grouped by gender
 
-Cypher (CognoDB / Memgraph):
+Cypher (CognoDB / Memgraph/ FalkorDB):
   MATCH (u:User {id: $id}) RETURN u                          -- point
   MATCH (u:User {gender: 1}) RETURN count(u)                 -- filtered
   MATCH (u:User) RETURN u.gender, count(u) ORDER BY u.gender -- aggregation

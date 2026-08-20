@@ -8,7 +8,7 @@ For each database:
 
 Equivalent logical query: "Find all nodes reachable in N hops from node X"
 
-Cypher  (CognoDB / Memgraph):
+Cypher  (CognoDB / Memgraph/ FalkorDB):
   MATCH (u:User {id: $id})-[:FOLLOWS*1]->(v) RETURN count(v)   -- 1-hop
   MATCH (u:User {id: $id})-[:FOLLOWS*2]->(v) RETURN count(v)   -- 2-hop
   MATCH (u:User {id: $id})-[:FOLLOWS*3]->(v) RETURN count(v)   -- 3-hop

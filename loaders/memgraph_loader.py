@@ -1,25 +1,3 @@
-"""
-Load the sampled Pokec dataset into self-hosted Memgraph.
-
-Deployment: Render free instance (512 MB RAM cap, 0.1 CPU burstable),
-running Memgraph in ON_DISK_TRANSACTIONAL storage mode to stay within
-the 256 MB RAM constraint comparable to CognoDB's free tier.
-
-Start command:
-  docker run -p 7687:7687 memgraph/memgraph \
-    --storage-mode=ON_DISK_TRANSACTIONAL \
-    --memory-limit=256
-
-Env vars:
-  MEMGRAPH_HOST      localhost (or Render host)
-  MEMGRAPH_PORT      7687
-  MEMGRAPH_USER      ""   (no auth on Community)
-  MEMGRAPH_PASSWORD  ""
-
-Cypher queries are identical to CognoDB/Neo4j — Memgraph is
-fully Bolt+Cypher compatible, so zero translation needed.
-"""
-
 import csv
 import os
 import time

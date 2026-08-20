@@ -1,9 +1,3 @@
-"""
-Read results/raw/<db>.json for all databases and produce:
-  - results/charts/*.png  (bar charts for each metric category)
-  - results/report.md     (full results matrix with methodology notes)
-"""
-
 import json
 import os
 import glob

@@ -1,16 +1,3 @@
-"""
-Load the sampled Pokec dataset into self-hosted FalkorDB.
-
-Start command:
-  docker run -p 6379:6379 falkordb/falkordb:latest
-
-Env vars:
-  FALKORDB_HOST      localhost (or Render host)
-  FALKORDB_PORT      6379
-  FALKORDB_PASSWORD  ""
-
-"""
-
 import csv
 import os
 import time

@@ -1,26 +1,3 @@
-"""
-Load the sampled Pokec dataset into self-hosted SurrealDB.
-
-Deployment: Render free instance (256 MB RAM native minimum):
-  docker run -p 8000:8000 surrealdb/surrealdb:latest start \
-    --log info \
-    --user root \
-    --pass $SURREALDB_PASSWORD \
-    file:/data/pokec.db
-
-Env vars:
-  SURREALDB_URL       ws://localhost:8000/rpc
-  SURREALDB_USER      root
-  SURREALDB_PASSWORD  <password>
-  SURREALDB_NS        bench
-  SURREALDB_DB        pokec
-
-Query language note:
-  SurrealDB uses SurrealQL (SQL-like with graph extensions).
-  Equivalent queries are documented in workloads/traversal.py.
-  Graph traversal in SurrealQL uses -> and <- operators.
-"""
-
 import asyncio
 import csv
 import os
