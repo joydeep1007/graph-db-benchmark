@@ -94,7 +94,7 @@ def run_workers(
     return combined
 
 
-# ─── Cypher (CognoDB / Neo4j / Memgraph) ─────────────────────────────────────
+# ─── Cypher (CognoDB / Memgraph) ─────────────────────────────────────
 
 def bench_cypher_mixed(make_driver_fn, db_name: str, sample_ids: list[str]) -> None:
     print(f"\n  {db_name} mixed workload")
@@ -132,6 +132,45 @@ def bench_cypher_mixed(make_driver_fn, db_name: str, sample_ids: list[str]) -> N
         for s in sessions:
             s.close()
         driver.close()
+
+
+# ─── FalkorDB ─────────────────────────────────────────────────────────────────
+
+def bench_falkordb_mixed(sample_ids: list[str]) -> None:
+    print("\n  FalkorDB mixed workload")
+    from falkordb import FalkorDB
+    host = os.environ.get("FALKORDB_HOST", "localhost")
+    port = int(os.environ.get("FALKORDB_PORT", 6379))
+    pw   = os.environ.get("FALKORDB_PASSWORD", "")
+    kwargs = {"host": host, "port": port}
+    if pw:
+        kwargs["password"] = pw
+
+    for n in CONCURRENCY_LEVELS:
+        db = FalkorDB(**kwargs)
+        graphs = [db.select_graph("pokec") for _ in range(n)]
+
+        def make_read(wid):
+            g = graphs[wid % len(graphs)]
+            return lambda nid: g.query(
+                "MATCH (u:User {id:$id})-[:FOLLOWS]->(v) RETURN count(v)", params={"id":nid}
+            )
+
+        def make_write(wid):
+            g = graphs[wid % len(graphs)]
+            return lambda nid: g.query(
+                "MATCH (u:User {id:$id}) SET u.last_seen=$ts",
+                params={"id":nid, "ts":int(time.time())},
+            )
+
+        res = run_workers(n, DURATION_SECONDS, make_read, make_write, sample_ids)
+        qps = res.ops / DURATION_SECONDS
+        stats = summarise(res.latencies) if res.latencies else {}
+        stats.update({"qps": round(qps,1), "errors": res.errors,
+                      "concurrency": n, "duration_s": DURATION_SECONDS})
+        save_result("falkordb", "mixed", f"c{n}", stats)
+        print(f"    c={n:2d} → {qps:6.1f} QPS  p50={stats.get('p50_ms','?')}ms"
+              f"  p95={stats.get('p95_ms','?')}ms  errors={res.errors}")
 
 
 # ─── ArangoDB ─────────────────────────────────────────────────────────────────
@@ -244,7 +283,7 @@ def _cypher_runner(env_uri, env_user_key, env_user_default, env_pw, bolt_prefix=
 if __name__ == "__main__":
     import argparse
     p = argparse.ArgumentParser()
-    p.add_argument("db", choices=["cognodb","neo4j","memgraph","arangodb","surrealdb"])
+    p.add_argument("db", choices=["cognodb","memgraph","arangodb","surrealdb","falkordb"])
     args = p.parse_args()
     sample = load_ids()
 
@@ -252,10 +291,7 @@ if __name__ == "__main__":
         bench_cypher_mixed(
             _cypher_runner("COGNODB_URI","COGNODB_USER","cognodb","COGNODB_PASSWORD"),
             "cognodb", sample)
-    elif args.db == "neo4j":
-        bench_cypher_mixed(
-            _cypher_runner("NEO4J_URI","NEO4J_USER","neo4j","NEO4J_PASSWORD"),
-            "neo4j", sample)
+
     elif args.db == "memgraph":
         from neo4j import GraphDatabase
         host = os.environ.get("MEMGRAPH_HOST","localhost")
@@ -277,3 +313,5 @@ if __name__ == "__main__":
         bench_arango_mixed(db, sample)
     elif args.db == "surrealdb":
         bench_surreal_mixed(sample)
+    elif args.db == "falkordb":
+        bench_falkordb_mixed(sample)

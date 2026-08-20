@@ -1,13 +1,14 @@
 """
-Load the sampled Pokec dataset into Neo4j AuraDB Free.
+Load the sampled Pokec dataset into self-hosted FalkorDB.
+
+Start command:
+  docker run -p 6379:6379 falkordb/falkordb:latest
 
 Env vars:
-  NEO4J_URI       neo4j+s://<instance>.databases.neo4j.io
-  NEO4J_USER      neo4j
-  NEO4J_PASSWORD  <aura password>
+  FALKORDB_HOST      localhost (or Render host)
+  FALKORDB_PORT      6379
+  FALKORDB_PASSWORD  ""
 
-Logic is identical to cognodb_loader.py — same driver, same Cypher.
-This ensures query-language parity for the benchmark.
 """
 
 import csv
@@ -15,7 +16,7 @@ import os
 import time
 import sys
 
-from neo4j import GraphDatabase
+from falkordb import FalkorDB
 
 DATA_DIR   = os.path.join(os.path.dirname(__file__), "..", "data")
 NODES_CSV  = os.path.join(DATA_DIR, "nodes.csv")
@@ -23,24 +24,30 @@ EDGES_CSV  = os.path.join(DATA_DIR, "edges.csv")
 BATCH_SIZE = 500
 
 
-def get_driver():
-    uri  = os.environ["NEO4J_URI"]
-    user = os.environ.get("NEO4J_USER", "neo4j")
-    pw   = os.environ["NEO4J_PASSWORD"]
-    return GraphDatabase.driver(uri, auth=(user, pw))
+def get_graph():
+    host = os.environ.get("FALKORDB_HOST", "localhost")
+    port = int(os.environ.get("FALKORDB_PORT", 6379))
+    pw   = os.environ.get("FALKORDB_PASSWORD", "")
+    
+    kwargs = {"host": host, "port": port}
+    if pw:
+        kwargs["password"] = pw
+        
+    db = FalkorDB(**kwargs)
+    return db.select_graph("pokec")
 
 
-def clear_db(session):
+def clear_db(graph):
     print("  Clearing existing data ...")
-    session.run("MATCH (n) DETACH DELETE n")
+    graph.query("MATCH (n) DETACH DELETE n")
 
 
-def create_constraints(session):
-    print("  Creating constraints ...")
-    session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (u:User) REQUIRE u.id IS UNIQUE")
+def create_index(graph):
+    print("  Creating index on User.id ...")
+    graph.query("CREATE INDEX FOR (u:User) ON (u.id)")
 
 
-def load_nodes(session) -> tuple[int, float]:
+def load_nodes(graph) -> tuple[int, float]:
     print("  Loading nodes ...")
     rows = []
     with open(NODES_CSV, newline="", encoding="utf-8") as f:
@@ -56,13 +63,13 @@ def load_nodes(session) -> tuple[int, float]:
     total = 0
     for i in range(0, len(rows), BATCH_SIZE):
         batch = rows[i : i + BATCH_SIZE]
-        session.run(
+        graph.query(
             """
             UNWIND $batch AS row
             MERGE (u:User {id: row.id})
             SET u.age = row.age, u.gender = row.gender
             """,
-            batch=batch,
+            params={"batch": batch},
         )
         total += len(batch)
         print(f"    {total:,} / {len(rows):,} nodes", end="\r")
@@ -72,7 +79,7 @@ def load_nodes(session) -> tuple[int, float]:
     return total, elapsed
 
 
-def load_edges(session) -> tuple[int, float]:
+def load_edges(graph) -> tuple[int, float]:
     print("  Loading edges ...")
     rows = []
     with open(EDGES_CSV, newline="", encoding="utf-8") as f:
@@ -84,13 +91,13 @@ def load_edges(session) -> tuple[int, float]:
     total = 0
     for i in range(0, len(rows), BATCH_SIZE):
         batch = rows[i : i + BATCH_SIZE]
-        session.run(
+        graph.query(
             """
             UNWIND $batch AS row
             MATCH (a:User {id: row.src}), (b:User {id: row.dst})
             MERGE (a)-[:FOLLOWS]->(b)
             """,
-            batch=batch,
+            params={"batch": batch},
         )
         total += len(batch)
         print(f"    {total:,} / {len(rows):,} edges", end="\r")
@@ -101,22 +108,22 @@ def load_edges(session) -> tuple[int, float]:
 
 
 def main():
-    print("=== Neo4j AuraDB loader ===")
-    driver = get_driver()
-    with driver.session() as session:
-        clear_db(session)
-        create_constraints(session)
-        n_nodes, t_nodes = load_nodes(session)
-        n_edges, t_edges = load_edges(session)
-    driver.close()
+    print("=== FalkorDB loader ===")
+    graph = get_graph()
+    
+    clear_db(graph)
+    create_index(graph)
+    n_nodes, t_nodes = load_nodes(graph)
+    n_edges, t_edges = load_edges(graph)
 
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
     from workloads.utils import save_result
-    save_result("neo4j", "ingest", "nodes", {
+    
+    save_result("falkordb", "ingest", "nodes", {
         "count": n_nodes, "wall_seconds": round(t_nodes, 3),
         "nodes_per_second": round(n_nodes / t_nodes),
     })
-    save_result("neo4j", "ingest", "edges", {
+    save_result("falkordb", "ingest", "edges", {
         "count": n_edges, "wall_seconds": round(t_edges, 3),
         "edges_per_second": round(n_edges / t_edges),
     })

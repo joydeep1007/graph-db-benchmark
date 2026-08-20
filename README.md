@@ -43,7 +43,7 @@ bash run_all.sh cognodb neo4j
 | Platform          | Tier                      | Protocol             | Query lang | vCPU          | RAM                 | Disk           |
 | ----------------- | ------------------------- | -------------------- | ---------- | ------------- | ------------------- | -------------- |
 | **CognoDB Cloud** | Free (c0)                 | Bolt (Neo4j-compat.) | Cypher     | 0.5 burstable | 256 MB              | 1 GB           |
-| **Neo4j AuraDB**  | Free                      | Bolt                 | Cypher     | 0.5 burstable | 200 MB              | 200k nodes cap |
+
 | **Memgraph**      | Self-hosted (Render free) | Bolt                 | Cypher     | 0.1 shared    | 256 MB (capped)     | 1 GB           |
 | **ArangoDB**      | Self-hosted (Render free) | HTTP/REST            | AQL        | 0.1 shared    | 256 MB (capped)     | 1 GB           |
 | **SurrealDB**     | Self-hosted (Render free) | WebSocket            | SurrealQL  | 0.1 shared    | 256 MB (native min) | 1 GB           |
@@ -57,7 +57,7 @@ bash run_all.sh cognodb neo4j
 
 ### Query language equivalence
 
-Three of the five databases (CognoDB, Neo4j, Memgraph) use identical Cypher queries over Bolt — zero translation required. For the other two:
+Two of the four databases (CognoDB, Memgraph) use identical Cypher queries over Bolt — zero translation required. For the other two:
 
 | Logical query   | Cypher                                                    | AQL (ArangoDB)                                                                  | SurrealQL (SurrealDB)                              |
 | --------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------- |
@@ -83,7 +83,7 @@ Three of the five databases (CognoDB, Neo4j, Memgraph) use identical Cypher quer
 | Node properties   | `id` (string, unique), `age` (int), `gender` (int 0/1)                          |
 | Sampling method   | Reservoir sampling (seed=42) over nodes; edges kept if both endpoints in sample |
 
-**Why this size?** Neo4j AuraDB Free caps at 200k nodes / 400k relationships. At 50k nodes / 200k edges, the dataset fits every platform's free tier with headroom.
+**Why this size?** At 50k nodes / 200k edges, the dataset fits every platform's free tier with headroom.
 
 **Reproducible sampling**:
 
@@ -102,7 +102,7 @@ python data/sample_pokec.py
 | Platform     | Load method                                    | Batch size |
 | ------------ | ---------------------------------------------- | ---------- |
 | CognoDB      | Neo4j driver `UNWIND ... MERGE`                | 500        |
-| Neo4j AuraDB | Neo4j driver `UNWIND ... MERGE`                | 500        |
+
 | Memgraph     | Neo4j driver `UNWIND ... MERGE` (Bolt-compat.) | 500        |
 | ArangoDB     | `import_bulk()` via python-arango              | 500        |
 | SurrealDB    | `INSERT INTO` + `RELATE` over WebSocket        | 200        |
@@ -119,9 +119,9 @@ python data/sample_pokec.py
 
 ### Honest caveats
 
-- Self-hosted instances (Memgraph, ArangoDB, SurrealDB) are on Render's **shared** free tier. Cold starts, shared CPU burst, and network variance between Render and cloud-hosted platforms (CognoDB, Neo4j) will inflate latency for self-hosted options. This is documented, not hidden.
+- Self-hosted instances (Memgraph, ArangoDB, SurrealDB) are on Render's **shared** free tier. Cold starts, shared CPU burst, and network variance between Render and cloud-hosted platforms (CognoDB) will inflate latency for self-hosted options. This is documented, not hidden.
 - Memgraph's **on-disk mode** is significantly slower than its default in-memory mode. Results reflect a storage-mode constraint, not Memgraph's peak capability.
-- Neo4j AuraDB Free applies **rate limiting** on the free tier. Timeouts at high concurrency are noted in the error column of the mixed workload table.
+
 - ArangoDB and SurrealDB use **different query languages**. We verified logical equivalence of all queries, but some micro-optimisations available in Cypher (e.g. `shortestPath`) have no 1:1 counterpart.
 - Network latency between the benchmark client and cloud-hosted instances is included in all latency numbers. The client machine is documented below.
 
@@ -147,7 +147,7 @@ python data/sample_pokec.py
 | Database  | Nodes | Nodes/s | Edges | Edges/s | Total wall-clock |
 | --------- | ----- | ------- | ----- | ------- | ---------------- |
 | CognoDB   |       |         |       |         |                  |
-| Neo4j     |       |         |       |         |                  |
+
 | Memgraph  |       |         |       |         |                  |
 | ArangoDB  |       |         |       |         |                  |
 | SurrealDB |       |         |       |         |                  |
@@ -157,7 +157,7 @@ python data/sample_pokec.py
 | Database  | 1-hop p50 | 1-hop p95 | 2-hop p50 | 2-hop p95 | 3-hop p50 | 3-hop p95 |
 | --------- | --------- | --------- | --------- | --------- | --------- | --------- |
 | CognoDB   |           |           |           |           |           |           |
-| Neo4j     |           |           |           |           |           |           |
+
 | Memgraph  |           |           |           |           |           |           |
 | ArangoDB  |           |           |           |           |           |           |
 | SurrealDB |           |           |           |           |           |           |
@@ -167,7 +167,7 @@ python data/sample_pokec.py
 | Database  | Point p50 | Point p95 | Filtered p50 | Filtered p95 | Aggr p50 | Aggr p95 |
 | --------- | --------- | --------- | ------------ | ------------ | -------- | -------- |
 | CognoDB   |           |           |              |              |          |          |
-| Neo4j     |           |           |              |              |          |          |
+
 | Memgraph  |           |           |              |              |          |          |
 | ArangoDB  |           |           |              |              |          |          |
 | SurrealDB |           |           |              |              |          |          |
@@ -177,7 +177,7 @@ python data/sample_pokec.py
 | Database  | c=1 QPS | c=10 QPS | c=20 QPS | c=40 QPS | c=40 errors |
 | --------- | ------- | -------- | -------- | -------- | ----------- |
 | CognoDB   |         |          |          |          |             |
-| Neo4j     |         |          |          |          |             |
+
 | Memgraph  |         |          |          |          |             |
 | ArangoDB  |         |          |          |          |             |
 | SurrealDB |         |          |          |          |             |
@@ -187,7 +187,7 @@ python data/sample_pokec.py
 | Database     | Stored data size          | RAM observed     | Notes                              |
 | ------------ | ------------------------- | ---------------- | ---------------------------------- |
 | CognoDB      | Not observable            | Not observable   | Free tier exposes no metrics       |
-| Neo4j AuraDB | Via console → Storage tab | Not observable   | AuraDB console shows GB stored     |
+
 | Memgraph     | Via `SHOW STORAGE INFO`   | Via Docker stats | On-disk mode; lower than in-memory |
 | ArangoDB     | Via ArangoDB UI → Stats   | Via Docker stats |                                    |
 | SurrealDB    | Via `INFO FOR DB`         | Via Docker stats |                                    |
@@ -212,7 +212,7 @@ python data/sample_pokec.py
 
 **Ingest**: …
 
-**Traversal**: The Cypher-native databases (CognoDB, Neo4j, Memgraph) show…  
+**Traversal**: The Cypher-native databases (CognoDB, Memgraph) show…  
 2-hop vs 3-hop latency growth rate reveals how each engine handles intermediate result set explosion…
 
 **Lookup**: Point lookups are fast across all platforms because every database indexes `id`.  
@@ -223,14 +223,14 @@ CognoDB's free tier …
 
 ### Why the platforms differ
 
-- **CognoDB vs Neo4j AuraDB**: Both are Neo4j-protocol-compatible. Differences in latency likely reflect…
+
 - **Memgraph (on-disk)**: On-disk transactional mode serialises every node/edge access through RocksDB. This is a resource-constraint artefact, not Memgraph's design target.
 - **ArangoDB**: Multi-model architecture adds flexibility but may add overhead for pure graph traversals vs native graph engines.
 - **SurrealDB**: SurrealQL's `->follows->user` chained traversal syntax is expressive, but the engine's traversal implementation at 256 MB RAM…
 
 ### Fairness note
 
-The three Cypher databases (CognoDB, Neo4j, Memgraph) share identical client code and query text. ArangoDB and SurrealDB use translated queries that are logically equivalent but may have different query plan characteristics. We consider this an honest reflection of using each platform as its designers intended.
+The two Cypher databases (CognoDB, Memgraph) share identical client code and query text. ArangoDB and SurrealDB use translated queries that are logically equivalent but may have different query plan characteristics. We consider this an honest reflection of using each platform as its designers intended.
 
 ---
 
@@ -244,7 +244,7 @@ graph-db-benchmark/
 │   └── edges.csv            # Generated: ~200k edges
 ├── loaders/
 │   ├── cognodb_loader.py
-│   ├── neo4j_loader.py
+
 │   ├── memgraph_loader.py
 │   ├── arangodb_loader.py
 │   └── surrealdb_loader.py

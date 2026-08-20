@@ -8,7 +8,7 @@
 #   bash run_all.sh
 #
 # To run only specific databases:
-#   bash run_all.sh cognodb neo4j
+#   bash run_all.sh cognodb falkordb
 # ============================================================
 
 set -euo pipefail
@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # ── Which databases to benchmark ──────────────────────────────
-ALL_DBS=(cognodb neo4j memgraph arangodb surrealdb)
+ALL_DBS=(cognodb memgraph arangodb surrealdb falkordb)
 
 if [ $# -gt 0 ]; then
     DBS=("$@")

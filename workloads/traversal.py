@@ -8,7 +8,7 @@ For each database:
 
 Equivalent logical query: "Find all nodes reachable in N hops from node X"
 
-Cypher  (CognoDB / Neo4j / Memgraph):
+Cypher  (CognoDB / Memgraph):
   MATCH (u:User {id: $id})-[:FOLLOWS*1]->(v) RETURN count(v)   -- 1-hop
   MATCH (u:User {id: $id})-[:FOLLOWS*2]->(v) RETURN count(v)   -- 2-hop
   MATCH (u:User {id: $id})-[:FOLLOWS*3]->(v) RETURN count(v)   -- 3-hop
@@ -50,7 +50,7 @@ def load_sample_ids() -> list[str]:
     return sample
 
 
-# ─── CognoDB / Neo4j / Memgraph (Cypher) ─────────────────────────────────────
+# ─── CognoDB / Memgraph (Cypher) ─────────────────────────────────────
 
 def bench_cypher(driver, db_name: str, sample_ids: list[str]) -> None:
     print(f"\n  {db_name} traversal benchmark")
@@ -72,6 +72,29 @@ def bench_cypher(driver, db_name: str, sample_ids: list[str]) -> None:
             result = summarise(latencies)
             save_result(db_name, "traversal", f"{hop}_hop", result)
             print(f"    {hop}-hop → p50={result['p50_ms']}ms  p95={result['p95_ms']}ms")
+
+
+# ─── FalkorDB (Cypher) ────────────────────────────────────────────────────────
+
+def bench_falkordb(graph, db_name: str, sample_ids: list[str]) -> None:
+    print(f"\n  {db_name} traversal benchmark")
+
+    def make_hop_fn(hop: int, node_id: str):
+        query = (
+            f"MATCH (u:User {{id: $id}})-[:FOLLOWS*{hop}]->(v) RETURN count(v) AS c"
+        )
+        return lambda: graph.query(query, params={"id": node_id})
+
+    for hop in (1, 2, 3):
+        latencies = []
+        for i in range(ITERATIONS):
+            nid = sample_ids[i % len(sample_ids)]
+            fn  = make_hop_fn(hop, nid)
+            lat = time_query(fn, iterations=1)
+            latencies.extend(lat)
+        result = summarise(latencies)
+        save_result(db_name, "traversal", f"{hop}_hop", result)
+        print(f"    {hop}-hop → p50={result['p50_ms']}ms  p95={result['p95_ms']}ms")
 
 
 # ─── ArangoDB (AQL) ──────────────────────────────────────────────────────────
@@ -160,17 +183,6 @@ def run_cognodb():
     driver.close()
 
 
-def run_neo4j():
-    from neo4j import GraphDatabase
-    uri  = os.environ["NEO4J_URI"]
-    user = os.environ.get("NEO4J_USER", "neo4j")
-    pw   = os.environ["NEO4J_PASSWORD"]
-    driver = GraphDatabase.driver(uri, auth=(user, pw))
-    sample = load_sample_ids()
-    bench_cypher(driver, "neo4j", sample)
-    driver.close()
-
-
 def run_memgraph():
     from neo4j import GraphDatabase
     host = os.environ.get("MEMGRAPH_HOST", "localhost")
@@ -202,10 +214,25 @@ def run_surrealdb():
     bench_surreal(None, sample)
 
 
+def run_falkordb():
+    from falkordb import FalkorDB
+    host = os.environ.get("FALKORDB_HOST", "localhost")
+    port = int(os.environ.get("FALKORDB_PORT", 6379))
+    pw   = os.environ.get("FALKORDB_PASSWORD", "")
+    kwargs = {"host": host, "port": port}
+    if pw:
+        kwargs["password"] = pw
+    db = FalkorDB(**kwargs)
+    graph = db.select_graph("pokec")
+    sample = load_sample_ids()
+    bench_falkordb(graph, "falkordb", sample)
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("db", choices=["cognodb", "neo4j", "memgraph", "arangodb", "surrealdb"])
+    parser.add_argument("db", choices=["cognodb", "memgraph", "arangodb", "surrealdb", "falkordb"])
     args = parser.parse_args()
-    {"cognodb": run_cognodb, "neo4j": run_neo4j, "memgraph": run_memgraph,
-     "arangodb": run_arangodb, "surrealdb": run_surrealdb}[args.db]()
+    {"cognodb": run_cognodb, "memgraph": run_memgraph,
+     "arangodb": run_arangodb, "surrealdb": run_surrealdb,
+     "falkordb": run_falkordb}[args.db]()

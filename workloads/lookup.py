@@ -6,7 +6,7 @@ Queries:
   Filtered lookup — fetch all nodes where gender=1 (indexed scan)
   Aggregation     — count nodes grouped by gender
 
-Cypher (CognoDB / Neo4j / Memgraph):
+Cypher (CognoDB / Memgraph):
   MATCH (u:User {id: $id}) RETURN u                          -- point
   MATCH (u:User {gender: 1}) RETURN count(u)                 -- filtered
   MATCH (u:User) RETURN u.gender, count(u) ORDER BY u.gender -- aggregation
@@ -46,7 +46,7 @@ def load_sample_ids(n=50) -> list[str]:
     return random.sample(ids, min(n, len(ids)))
 
 
-# ─── Cypher (CognoDB / Neo4j / Memgraph) ─────────────────────────────────────
+# ─── Cypher (CognoDB / Memgraph) ─────────────────────────────────────
 
 def bench_cypher(driver, db_name: str, sample_ids: list[str]) -> None:
     print(f"\n  {db_name} lookup benchmark")
@@ -78,6 +78,38 @@ def bench_cypher(driver, db_name: str, sample_ids: list[str]) -> None:
         r = summarise(lats)
         save_result(db_name, "lookup", "aggregation", r)
         print(f"    aggr    → p50={r['p50_ms']}ms  p95={r['p95_ms']}ms")
+
+
+# ─── FalkorDB (Cypher) ────────────────────────────────────────────────────────
+
+def bench_falkordb(graph, db_name: str, sample_ids: list[str]) -> None:
+    print(f"\n  {db_name} lookup benchmark")
+
+    # Point lookup
+    lats = []
+    for i in range(ITERATIONS):
+        nid = sample_ids[i % len(sample_ids)]
+        fn  = lambda nid=nid: graph.query("MATCH (u:User {id:$id}) RETURN u", params={"id": nid})
+        lats.extend(time_query(fn, 1))
+    r = summarise(lats)
+    save_result(db_name, "lookup", "point", r)
+    print(f"    point   → p50={r['p50_ms']}ms  p95={r['p95_ms']}ms")
+
+    # Filtered lookup
+    fn = lambda: graph.query("MATCH (u:User {gender:1}) RETURN count(u) AS c")
+    lats = time_query(fn, ITERATIONS)
+    r = summarise(lats)
+    save_result(db_name, "lookup", "filtered", r)
+    print(f"    filtered→ p50={r['p50_ms']}ms  p95={r['p95_ms']}ms")
+
+    # Aggregation
+    fn = lambda: graph.query(
+        "MATCH (u:User) RETURN u.gender AS g, count(u) AS c ORDER BY g"
+    )
+    lats = time_query(fn, ITERATIONS)
+    r = summarise(lats)
+    save_result(db_name, "lookup", "aggregation", r)
+    print(f"    aggr    → p50={r['p50_ms']}ms  p95={r['p95_ms']}ms")
 
 
 # ─── ArangoDB (AQL) ──────────────────────────────────────────────────────────
@@ -182,14 +214,6 @@ def run_cognodb():
     driver.close()
 
 
-def run_neo4j():
-    from neo4j import GraphDatabase
-    driver = GraphDatabase.driver(os.environ["NEO4J_URI"],
-                                  auth=(os.environ.get("NEO4J_USER","neo4j"),
-                                        os.environ["NEO4J_PASSWORD"]))
-    bench_cypher(driver, "neo4j", load_sample_ids())
-    driver.close()
-
 
 def run_memgraph():
     from neo4j import GraphDatabase
@@ -218,10 +242,24 @@ def run_surrealdb():
     bench_surrealdb(load_sample_ids())
 
 
+def run_falkordb():
+    from falkordb import FalkorDB
+    host = os.environ.get("FALKORDB_HOST", "localhost")
+    port = int(os.environ.get("FALKORDB_PORT", 6379))
+    pw   = os.environ.get("FALKORDB_PASSWORD", "")
+    kwargs = {"host": host, "port": port}
+    if pw:
+        kwargs["password"] = pw
+    db = FalkorDB(**kwargs)
+    graph = db.select_graph("pokec")
+    bench_falkordb(graph, "falkordb", load_sample_ids())
+
+
 if __name__ == "__main__":
     import argparse
     p = argparse.ArgumentParser()
-    p.add_argument("db", choices=["cognodb","neo4j","memgraph","arangodb","surrealdb"])
+    p.add_argument("db", choices=["cognodb","memgraph","arangodb","surrealdb","falkordb"])
     args = p.parse_args()
-    {"cognodb":run_cognodb,"neo4j":run_neo4j,"memgraph":run_memgraph,
-     "arangodb":run_arangodb,"surrealdb":run_surrealdb}[args.db]()
+    {"cognodb":run_cognodb,"memgraph":run_memgraph,
+     "arangodb":run_arangodb,"surrealdb":run_surrealdb,
+     "falkordb":run_falkordb}[args.db]()

@@ -88,7 +88,27 @@ services:
       timeout: 5s
       retries: 10
 
+  # ── FalkorDB ──────────────────────────────────────────────────
+  falkordb:
+    image: falkordb/falkordb:latest
+    ports:
+      - "6379:6379"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+    volumes:
+      - falkordb_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
 volumes:
   memgraph_data:
   arangodb_data:
   surrealdb_data:
+  falkordb_data:

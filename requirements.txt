@@ -13,3 +13,7 @@ surrealdb==0.3.2
 # Analysis and charting
 matplotlib==3.9.0
 numpy==1.26.4
+
+# FalkorDB Python driver
+falkordb==1.7.1
+
