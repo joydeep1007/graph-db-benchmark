@@ -40,7 +40,7 @@ def load_all() -> dict:
     return data
 
 
-def safe_get(data, db, *keys, default="N/A"):
+def safe_get(data, db, *keys, default: object = "N/A"):
     d = data.get(db, {})
     for k in keys:
         if not isinstance(d, dict):
