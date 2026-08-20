@@ -21,7 +21,7 @@ services:
       - "7687:7687"
     command:
       - "--storage-mode=ON_DISK_TRANSACTIONAL"
-      - "--memory-limit=256"
+      - "--memory-limit=480"
       - "--log-level=WARNING"
     deploy:
       resources:

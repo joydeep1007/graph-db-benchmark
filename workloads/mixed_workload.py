@@ -67,13 +67,12 @@ def run_workers(
         while not stop.is_set():
             nid = sample_ids[i % len(sample_ids)]
             is_read = random.random() < READ_RATIO
-            fn = read_fn(nid) if is_read else write_fn(nid)
             t0 = time.perf_counter()
             try:
-                fn()
+                read_fn(nid) if is_read else write_fn(nid)
                 res.latencies.append((time.perf_counter() - t0) * 1000)
                 res.ops += 1
-            except Exception as e:
+            except Exception:
                 res.errors += 1
             i += 1
 
@@ -187,10 +186,10 @@ def bench_arango_mixed(db, sample_ids: list[str]) -> None:
             ))
 
         def make_write(_wid):
-            return lambda nid: db.aql.execute(
+            return lambda nid: list(db.aql.execute(
                 "FOR u IN users FILTER u.user_id==@id UPDATE u WITH {last_seen:@ts} IN users",
                 bind_vars={"id": nid, "ts": int(time.time())},
-            )
+            ))
 
         res = run_workers(n, DURATION_SECONDS, make_read, make_write, sample_ids)
         qps = res.ops / DURATION_SECONDS

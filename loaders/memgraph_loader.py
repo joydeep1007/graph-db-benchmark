@@ -32,7 +32,7 @@ load_dotenv()
 DATA_DIR   = os.path.join(os.path.dirname(__file__), "..", "data")
 NODES_CSV  = os.path.join(DATA_DIR, "nodes.csv")
 EDGES_CSV  = os.path.join(DATA_DIR, "edges.csv")
-BATCH_SIZE = 500
+BATCH_SIZE = 200
 
 
 def get_driver():
@@ -105,7 +105,7 @@ def load_edges(session) -> tuple[int, float]:
             """
             UNWIND $batch AS row
             MATCH (a:User {id: row.src}), (b:User {id: row.dst})
-            MERGE (a)-[:FOLLOWS]->(b)
+            CREATE (a)-[:FOLLOWS]->(b)
             """,
             batch=batch,
         )
