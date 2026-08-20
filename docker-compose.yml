@@ -45,7 +45,7 @@ services:
     environment:
       ARANGO_ROOT_PASSWORD: ${ARANGODB_PASSWORD}
       # Tell ArangoDB it has 256 MB so it sizes caches proportionally
-      ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY: "268435456"
+      ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY: "536870912"
     deploy:
       resources:
         limits:
