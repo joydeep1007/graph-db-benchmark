@@ -24,8 +24,10 @@ import csv
 import os
 import time
 import sys
-
+from dotenv import load_dotenv
 from neo4j import GraphDatabase  # Memgraph speaks the Bolt protocol
+
+load_dotenv()
 
 DATA_DIR   = os.path.join(os.path.dirname(__file__), "..", "data")
 NODES_CSV  = os.path.join(DATA_DIR, "nodes.csv")

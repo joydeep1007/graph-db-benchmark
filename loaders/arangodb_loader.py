@@ -26,8 +26,10 @@ import csv
 import os
 import time
 import sys
-
+from dotenv import load_dotenv
 from arango.client import ArangoClient
+
+load_dotenv()
 
 DATA_DIR   = os.path.join(os.path.dirname(__file__), "..", "data")
 NODES_CSV  = os.path.join(DATA_DIR, "nodes.csv")

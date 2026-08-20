@@ -126,7 +126,8 @@ def bench_arango(db, sample_ids: list[str]) -> None:
 
 
 # ─── SurrealDB (SurrealQL) ────────────────────────────────────────────────────
-
+from dotenv import load_dotenv
+load_dotenv()
 def bench_surreal(db_conn, sample_ids: list[str]) -> None:
     """db_conn is a synchronous wrapper returned by get_surreal_sync()."""
     import asyncio

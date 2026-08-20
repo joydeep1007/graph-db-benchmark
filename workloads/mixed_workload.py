@@ -135,7 +135,8 @@ def bench_cypher_mixed(make_driver_fn, db_name: str, sample_ids: list[str]) -> N
 
 
 # ─── FalkorDB ─────────────────────────────────────────────────────────────────
-
+from dotenv import load_dotenv
+load_dotenv()
 def bench_falkordb_mixed(sample_ids: list[str]) -> None:
     print("\n  FalkorDB mixed workload")
     from falkordb import FalkorDB

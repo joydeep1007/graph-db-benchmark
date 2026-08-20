@@ -204,7 +204,8 @@ def bench_surrealdb(sample_ids: list[str]) -> None:
 
 
 # ─── Entry points ─────────────────────────────────────────────────────────────
-
+from dotenv import load_dotenv
+load_dotenv()
 def run_cognodb():
     from neo4j import GraphDatabase
     driver = GraphDatabase.driver(os.environ["COGNODB_URI"],

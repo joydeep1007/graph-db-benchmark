@@ -26,8 +26,10 @@ import csv
 import os
 import sys
 import time
-
+from dotenv import load_dotenv
 from surrealdb import Surreal
+
+load_dotenv()
 
 DATA_DIR  = os.path.join(os.path.dirname(__file__), "..", "data")
 NODES_CSV = os.path.join(DATA_DIR, "nodes.csv")

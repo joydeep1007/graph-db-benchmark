@@ -32,7 +32,7 @@ services:
       - memgraph_data:/var/lib/memgraph
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "echo", "RETURN 1;", "|", "mgconsole", "--use-ssl=false"]
+      test: ["CMD-SHELL", "echo 'RETURN 1;' | mgconsole --use-ssl=false"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -55,7 +55,7 @@ services:
       - arangodb_data:/var/lib/arangodb3
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8529/_api/version"]
+      test: ["CMD", "arangosh", "--server.endpoint", "http://127.0.0.1:8529", "--server.username", "root", "--server.password", "${ARANGODB_PASSWORD}", "--javascript.execute-string", "db._version()"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -63,6 +63,7 @@ services:
   # ── SurrealDB ─────────────────────────────────────────────────
   surrealdb:
     image: surrealdb/surrealdb:v1.4.2
+    user: root
     ports:
       - "8000:8000"
     command:
@@ -73,7 +74,7 @@ services:
       - "root"
       - "--pass"
       - "${SURREALDB_PASSWORD}"
-      - "file:/data/pokec.db"
+      - "rocksdb:/data/pokec.db"
     deploy:
       resources:
         limits:
@@ -83,7 +84,7 @@ services:
       - surrealdb_data:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "/surreal", "is-ready", "--endpoint", "http://127.0.0.1:8000"]
       interval: 10s
       timeout: 5s
       retries: 10
