@@ -1,0 +1,15 @@
+# Graph DB Benchmark — Python dependencies
+# Install: pip install -r requirements.txt
+
+# Neo4j Bolt driver (used by CognoDB, Neo4j AuraDB, and Memgraph)
+neo4j==5.20.0
+
+# ArangoDB Python driver
+python-arango==8.3.3
+
+# SurrealDB Python SDK
+surrealdb==0.3.2
+
+# Analysis and charting
+matplotlib==3.9.0
+numpy==1.26.4

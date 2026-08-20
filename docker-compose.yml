@@ -1,0 +1,94 @@
+# docker-compose.yml
+# Spins up Memgraph, ArangoDB, and SurrealDB locally
+# with the same resource caps used on Render free tier.
+#
+# Usage:
+#   docker compose up -d
+#   # wait ~30s for all services to be ready
+#   docker compose ps
+#   docker compose down   # teardown
+#
+# Credentials: all read from your .env file (loaded by docker compose automatically)
+
+
+
+services:
+
+  # ── Memgraph ─────────────────────────────────────────────────
+  memgraph:
+    image: memgraph/memgraph:2.14.0
+    ports:
+      - "7687:7687"
+    command:
+      - "--storage-mode=ON_DISK_TRANSACTIONAL"
+      - "--memory-limit=256"
+      - "--log-level=WARNING"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+    volumes:
+      - memgraph_data:/var/lib/memgraph
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "echo", "RETURN 1;", "|", "mgconsole", "--use-ssl=false"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── ArangoDB ──────────────────────────────────────────────────
+  arangodb:
+    image: arangodb/arangodb:3.11
+    ports:
+      - "8529:8529"
+    environment:
+      ARANGO_ROOT_PASSWORD: ${ARANGODB_PASSWORD}
+      # Tell ArangoDB it has 256 MB so it sizes caches proportionally
+      ARANGODB_OVERRIDE_DETECTED_TOTAL_MEMORY: "268435456"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+    volumes:
+      - arangodb_data:/var/lib/arangodb3
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8529/_api/version"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── SurrealDB ─────────────────────────────────────────────────
+  surrealdb:
+    image: surrealdb/surrealdb:v1.4.2
+    ports:
+      - "8000:8000"
+    command:
+      - start
+      - "--log"
+      - "info"
+      - "--user"
+      - "root"
+      - "--pass"
+      - "${SURREALDB_PASSWORD}"
+      - "file:/data/pokec.db"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+    volumes:
+      - surrealdb_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  memgraph_data:
+  arangodb_data:
+  surrealdb_data:

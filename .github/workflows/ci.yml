@@ -1,0 +1,73 @@
+# .github/workflows/ci.yml
+# Runs on every push and PR.
+# Does NOT hit real databases (no credentials in CI).
+# Validates: imports work, utils module is correct, analyze.py runs on fixture data.
+
+name: CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  lint-and-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check imports compile
+        run: |
+          python -c "from workloads.utils import time_query, summarise, save_result; print('utils OK')"
+          python -c "import analyze; print('analyze OK')"
+
+      - name: Run analyze.py on fixture data
+        run: |
+          mkdir -p results/raw
+          # Write minimal fixture result files so analyze.py has something to read
+          python - <<'EOF'
+          import json, os
+          fixture = {
+            "ingest": {
+              "nodes": {"count": 50000, "wall_seconds": 45.2, "nodes_per_second": 1106},
+              "edges": {"count": 200000, "wall_seconds": 310.5, "edges_per_second": 644}
+            },
+            "traversal": {
+              "1_hop": {"p50_ms": 12.3, "p95_ms": 45.1, "mean_ms": 15.2, "min_ms": 8.1, "max_ms": 120.4, "n": 100},
+              "2_hop": {"p50_ms": 55.1, "p95_ms": 210.3, "mean_ms": 72.0, "min_ms": 30.2, "max_ms": 480.1, "n": 100},
+              "3_hop": {"p50_ms": 320.0, "p95_ms": 1200.0, "mean_ms": 410.0, "min_ms": 100.0, "max_ms": 3000.0, "n": 100}
+            },
+            "lookup": {
+              "point":       {"p50_ms": 8.1,  "p95_ms": 22.0,  "mean_ms": 10.0, "min_ms": 5.0, "max_ms": 50.0, "n": 100},
+              "filtered":    {"p50_ms": 90.0, "p95_ms": 200.0, "mean_ms": 100.0,"min_ms": 60.0,"max_ms": 400.0,"n": 100},
+              "aggregation": {"p50_ms": 95.0, "p95_ms": 210.0, "mean_ms": 110.0,"min_ms": 65.0,"max_ms": 420.0,"n": 100}
+            },
+            "mixed": {
+              "c1":  {"qps": 25.0,  "p50_ms": 38.0,  "p95_ms": 90.0,  "errors": 0, "concurrency": 1,  "duration_s": 30},
+              "c10": {"qps": 120.0, "p50_ms": 80.0,  "p95_ms": 250.0, "errors": 2, "concurrency": 10, "duration_s": 30},
+              "c20": {"qps": 180.0, "p50_ms": 110.0, "p95_ms": 400.0, "errors": 5, "concurrency": 20, "duration_s": 30},
+              "c40": {"qps": 210.0, "p50_ms": 190.0, "p95_ms": 700.0, "errors": 12,"concurrency": 40, "duration_s": 30}
+            }
+          }
+          for db in ["cognodb","neo4j","memgraph","arangodb","surrealdb"]:
+            with open(f"results/raw/{db}.json","w") as f:
+              json.dump(fixture, f)
+          print("fixture data written")
+          EOF
+          python analyze.py
+
+      - name: Verify outputs exist
+        run: |
+          ls results/charts/*.png
+          ls results/report.md
+          echo "All outputs present"

@@ -1,0 +1,18 @@
+# Credentials — NEVER commit
+.env
+
+# Downloaded dataset (large)
+data/soc-pokec-profiles.txt.gz
+data/soc-pokec-relationships.txt.gz
+
+# Raw results (generated) — commit results/report.md and charts
+results/raw/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.csv
+
