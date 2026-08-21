@@ -391,6 +391,3 @@ graph-db-benchmark/
 		└── utils.py
 ```
 
-## License
-
-MIT
